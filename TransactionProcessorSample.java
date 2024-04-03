@@ -2,6 +2,7 @@
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -16,7 +17,8 @@ public class TransactionProcessorSample {
     public static void main(final String[] args) throws IOException {
 
         /*
-         * I wanted to read all the files using one function, because they're basically using the same code.
+         * I wanted to read all the files using one function, because they're basically
+         * using the same code.
          * But due to time restrictions, I couldn't find a way to utilize or have an
          * unknown type variable as an argument in the function.
          */
@@ -26,26 +28,41 @@ public class TransactionProcessorSample {
 
         List<Event> events = Transaction.processTransactions(users, transactions, binMappings);
 
-        TransactionProcessorSample.writeBalances(events);
-        // TransactionProcessorSample.writeEvents(Paths.get(args[4]), events);
+        // TransactionProcessorSample.writeBalances(events);
+        TransactionProcessorSample.writeBalances(Paths.get(args[3]), users);
+        TransactionProcessorSample.writeEvents(Paths.get(args[4]), events);
     }
 
-    private static void writeBalances(final List<Event> events) {
-        for (Event event : events) {
-            System.out.println("transaction ID: " + event.transaction_id + " Status: " + event.status + " Message: "
-                    + event.message);
+    private static void createDir(final Path filePath) throws IOException {
+        Path directoryPath = filePath.getParent();
+        if (directoryPath != null && !Files.exists(directoryPath)) {
+            Files.createDirectories(directoryPath);
         }
-        // ToDo Implementation
+    }
+
+    private static void writeBalances(final Path filePath, final List<User> users) throws IOException {
+        createDir(filePath);
+        try (final FileWriter writer = new FileWriter(filePath.toFile(), false)) {
+            writer.append("USER_ID,BALANCE\n");
+            for (User user : users) {
+                writer.append(user.user_id).append(",").append(User.formatDouble(user.balance));
+                if (!user.equals(users.getLast()))
+                    writer.append("\n");
+            }
+        }
     }
 
     private static void writeEvents(final Path filePath, final List<Event> events) throws IOException {
+        createDir(filePath);
+        
         try (final FileWriter writer = new FileWriter(filePath.toFile(), false)) {
-            writer.append("transaction_id,status,message\n");
+            writer.append("TRANSACTION_ID,STATUS,MESSAGE\n");
             for (final var event : events) {
-                writer.append(event.transaction_id).append(",").append(event.status).append(",").append(event.message)
-                        .append("\n");
+                writer.append(event.transaction_id).append(",").append(event.status).append(",").append(event.message);
+
+                if (!event.equals(events.getLast()))
+                    writer.append("\n");
             }
         }
     }
 }
-

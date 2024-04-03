@@ -52,58 +52,41 @@ public class Transaction {
     public static List<Event> processTransactions(final List<User> users, final List<Transaction> transactions,
             final List<BinMapping> binMappings) {
 
+        List<Deposit> deposits = new ArrayList<>();
         List<Event> events = new ArrayList<>();
         List<String> transaction_id_List = new ArrayList<>();
-        List<Deposit> deposits = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
             Event approved = new Event(transaction.transaction_id, Event.STATUS_APPROVED, "OK");
             Event declined = new Event(transaction.transaction_id, Event.STATUS_DECLINED, "");
 
-            if (transaction_id_List.contains(transaction.transaction_id)) {
+            if (!transaction.type.equals("DEPOSIT") && !transaction.type.equals("WITHDRAW")) {
+                declined.message = "Invalid transaction type; got " + transaction.type;
+                events.add(declined);
+                continue;
+            } else if (transaction.amount <= 0) {
+                declined.message = "Transaction amount cannot be negative or 0; got: "
+                        + User.formatDouble(transaction.amount);
+                events.add(declined);
+                continue;
+            } else if (transaction_id_List.contains(transaction.transaction_id)) {
                 declined.message = "Transaction " + transaction.transaction_id + " already processed (id non-unique)";
                 events.add(declined);
                 continue;
             }
             transaction_id_List.add(transaction.transaction_id);
 
-            if (transaction.amount < 0) {
-                declined.message = "transaction amount cannot be negative; got: " + transaction.amount;
-                events.add(declined);
-                continue;
-            }
+            declined.message = User.processUsers(transaction, users, binMappings, deposits);
+            if (declined.message.equals("")) {
+                if (transaction.type.equals("DEPOSIT"))
+                    deposits.add(new Deposit(transaction.account_number, transaction.user_id));
 
-            if (transaction.method.equals("TRANSFER")) {
-                if (!Iban.Validate(transaction.account_number)) {
-                    declined.message = "Invalid iban " + transaction.account_number;
-                    events.add(declined);
-                    continue;
-                }
-            } else if (transaction.type.equals("DEPOSIT")) {
-                declined.message = BinMapping.ValidateCard(transaction.account_number, binMappings);
-                if (!declined.message.equals("")) {
-                    events.add(declined);
-                    continue;
-                }
-            }
-            events = User.processUsers(transaction, events, users);
+                double amount = transaction.type.equals("DEPOSIT") ? transaction.amount : -transaction.amount;
+                users.forEach(user -> user.balance += user.user_id.equals(transaction.user_id) ? amount : 0);
 
-            // See katki 
-            if (!deposits.contains(new Deposit(transaction.account_number, transaction.user_id))) {
-                if (transaction.type.equals("WITHDRAW")) {
-                declined.message = "Cannot withdraw with a new account " + transaction.account_number;
+                events.add(approved);
+            } else {
                 events.add(declined);
-                continue;
-                } else if (deposits.contains(transaction.account_number)) {
-                    declined.message = "Account has already been used by another user.";
-                    events.add(declined);
-                    continue;
-                }
-            }
-            // See ka
-            if (transaction.type.equals("DEPOSIT") && events.getLast().message.equals("OK")) {
-                deposits.add(new Deposit(transaction.account_number, transaction.user_id));
-                System.out.println("Added deposit: " + deposits.getLast().account_number);
             }
         }
         return events;

@@ -4,8 +4,13 @@ public class Iban {
     private static final int ibanMinSize = 15;
     private static final int ibanMaxSize = 34;
 
-    public static boolean Validate(String iban) {
-        if (iban.length() < ibanMinSize || iban.length() > ibanMaxSize) return false;
+    public static String Validate(String iban, String userCountry) {
+        String ibanCountry = iban.substring(0, 2);
+        if (!userCountry.equals(ibanCountry))
+            return "Invalid account country " + ibanCountry + "; expected " + userCountry;
+
+        if (iban.length() < ibanMinSize || iban.length() > ibanMaxSize)
+            return "Invalid iban " + iban;
 
         String reformattedIban = iban.substring(4) + iban.substring(0, 4);
 
@@ -13,14 +18,14 @@ public class Iban {
         for (int i = 0; i < reformattedIban.length(); i++) {
             int charValue = Character.digit(reformattedIban.charAt(i), 36);
 
-            if (charValue < 0 || charValue > 35) return false;
+            if (charValue < 0 || charValue > 35)
+                return "Invalid iban " + iban;
 
             total = (charValue > 9 ? total * 100 : total * 10) + charValue;
-            if (total > maxDigits) {
+            if (total > maxDigits)
                 total = total % modulo;
-              }
         }
 
-        return (int)(total % modulo) == 1;
+        return (int) (total % modulo) == 1 ? "" : "Invalid iban " + iban;
     }
 }

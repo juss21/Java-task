@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class BinMapping {
     public String name;
@@ -46,11 +47,16 @@ public class BinMapping {
         return data;
     }
 
-    public static String ValidateCard(String cardNumber, List<BinMapping> bins) {
+    public static String ValidateCard(String cardNumber, List<BinMapping> bins, User user) {
         Long firstTenDigits = Long.parseLong(cardNumber.substring(0, 10));
 
         for (BinMapping bin : bins) {
             if (firstTenDigits >= bin.range_from && firstTenDigits <= bin.range_to) {
+
+                String userCountry = Locale.of("en", user.country).getISO3Country();
+                if (!userCountry.equals(bin.country))
+                    return "Invalid country " + bin.country + "; expected " + user.country + " (" + userCountry + ")";
+
                 return bin.type.equals("DC") ? "" : "Only DC cards allowed; got " + bin.type;
             }
         }

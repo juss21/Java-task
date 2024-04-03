@@ -55,56 +55,53 @@ public class User {
         return data;
     }
 
-    private static String amountValidation(double max, double min, double amount, String transactionType, double balance) {
+    public static String formatDouble(double value) {
+        return String.format("%.2f", value);
+    }
+
+    private static String amountValidation(double max, double min, double amount, String transactionType,
+            double balance) {
         if (amount < min || amount > max) {
-            return "Amount " + amount + " is " + (amount < min ? "under the " + transactionType + " limit of " + min
-                    : "over the " + transactionType + " limit of " + max);
+            return "Amount " + formatDouble(amount) + " is "
+                    + (amount < min ? "under the " + transactionType + " limit of " + formatDouble(min)
+                            : "over the " + transactionType + " limit of " + formatDouble(max));
         }
         if (amount > balance && transactionType.equals("withdraw")) {
-            return "Not enough balance to withdraw " + amount + " - balance is too low at " + balance;
+            return "Not enough balance to withdraw " + formatDouble(amount) + " - balance is too low at "
+                    + formatDouble(balance);
         }
         return "";
     }
 
-    public static List<Event> processUsers(Transaction transaction, final List<Event> events, final List<User> users) {
-        Event approved = new Event(transaction.transaction_id, Event.STATUS_APPROVED, "OK");
-        Event declined = new Event(transaction.transaction_id, Event.STATUS_DECLINED, "");
+    public static String processUsers(Transaction transaction, final List<User> users,
+            final List<BinMapping> binMappings, List<Deposit> deposits) {
 
         for (User user : users) {
             if (user.user_id.equals(transaction.user_id)) {
                 if (user.frozen) {
-                    declined.message = user.user_id + " - Account is frozen";
-                    events.add(declined);
-                    break;
+                    return user.user_id + " - Account is frozen";
                 }
 
                 double max = transaction.type.equals("DEPOSIT") ? user.deposit_max : user.withdraw_max;
                 double min = transaction.type.equals("DEPOSIT") ? user.deposit_min : user.withdraw_min;
 
-                declined.message = amountValidation(max, min, transaction.amount, transaction.type.toLowerCase(),
-                        user.balance);
-                if (!declined.message.equals("")) {
-                    events.add(declined);
-                    break;
-                }
+                String message = amountValidation(max, min, transaction.amount, transaction.type.toLowerCase(), user.balance);
+                if (!message.equals(""))
+                    return message;
 
-                if (transaction.method.equals("TRANSFER")) {
-                    String ibanCountry = transaction.account_number.substring(0, 2);
-                    if (!user.country.equals(ibanCountry)) {
-                        declined.message = "Invalid account country " + ibanCountry + "; expected " + user.country;
-                        events.add(declined);
-                        break;
-                    }
-                }
-                
-                events.add(approved);
-                break;
+                message = Deposit.Validate(deposits, transaction);
+                if (!message.equals(""))
+                    return message;
+
+                if (transaction.method.equals("TRANSFER"))
+                    return Iban.Validate(transaction.account_number, user.country);
+
+                return BinMapping.ValidateCard(transaction.account_number, binMappings, user);
             }
-            if (users.get(users.size() - 1) == user) {
-                declined.message = transaction.user_id + " - Account doesn't exist";
-                events.add(declined);
+            if (users.getLast().equals(user)) {
+                return "User " + transaction.user_id + " not found in Users";
             }
         }
-        return events;
+        return "";
     }
 }
