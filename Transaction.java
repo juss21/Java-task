@@ -1,3 +1,5 @@
+//package com.playtech.assignment;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -38,7 +40,11 @@ public class Transaction {
                 String[] dataArray = lineText.split(",");
 
                 if (dataArray.length == 6) {
-                    data.add(new Transaction(dataArray));
+                    try {
+                        data.add(new Transaction(dataArray));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error formatting data to number - file path: " + filePath + " at line " + lineNumber + " - " + e.getMessage());
+                    }
                 } else {
                     System.err.println("Invalid data at line " + lineNumber + " file path: " + filePath);
                 }
@@ -82,12 +88,14 @@ public class Transaction {
                     deposits.add(new Deposit(transaction.account_number, transaction.user_id));
 
                 double amount = transaction.type.equals("DEPOSIT") ? transaction.amount : -transaction.amount;
-                users.forEach(user -> user.balance += user.user_id.equals(transaction.user_id) ? amount : 0);
+                users.forEach(user -> { 
+                    if (user.user_id.equals(transaction.user_id)) 
+                        user.balance += amount;
+                });
 
                 events.add(approved);
-            } else {
+            } else
                 events.add(declined);
-            }
         }
         return events;
     }

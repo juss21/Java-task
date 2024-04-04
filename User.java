@@ -1,3 +1,5 @@
+//package com.playtech.assignment;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -9,7 +11,7 @@ import java.util.List;
 public class User {
 
     public String user_id;
-    // private String username;
+    // public String username;
     public double balance;
     public String country;
     public boolean frozen;
@@ -44,7 +46,12 @@ public class User {
                 lineNumber++;
                 String[] dataArray = lineText.split(",");
                 if (dataArray.length == 9) {
-                    data.add(new User(dataArray));
+                    try {
+                        data.add(new User(dataArray));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error formatting data file path: " + filePath + " at line " + lineNumber
+                                + " - " + e.getMessage());
+                    }
                 } else {
                     System.err.println("Invalid data at line " + lineNumber + " file path: " + filePath);
                 }
@@ -72,7 +79,6 @@ public class User {
         }
         return "";
     }
-
     public static String processUsers(Transaction transaction, final List<User> users,
             final List<BinMapping> binMappings, List<Deposit> deposits) {
 
