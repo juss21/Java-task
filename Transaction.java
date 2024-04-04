@@ -39,6 +39,8 @@ public class Transaction {
                 lineNumber++;
                 String[] dataArray = lineText.split(",");
 
+                // 6 = length of Transaction class and expected output from the file,
+                // could also be an argument variable if file reading is done with one function
                 if (dataArray.length == 6) {
                     try {
                         data.add(new Transaction(dataArray));
@@ -57,20 +59,23 @@ public class Transaction {
 
     public static List<Event> processTransactions(final List<User> users, final List<Transaction> transactions,
             final List<BinMapping> binMappings) {
-
+        
         List<Deposit> deposits = new ArrayList<>();
         List<Event> events = new ArrayList<>();
         List<String> transaction_id_List = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
+
             Event approved = new Event(transaction.transaction_id, Event.STATUS_APPROVED, "OK");
-            Event declined = new Event(transaction.transaction_id, Event.STATUS_DECLINED, "");
+            Event declined = new Event(transaction.transaction_id, Event.STATUS_DECLINED, ""); 
+            // declined.message: "" = STATUS OK
 
             if (!transaction.type.equals("DEPOSIT") && !transaction.type.equals("WITHDRAW")) {
                 declined.message = "Invalid transaction type; got " + transaction.type;
                 events.add(declined);
                 continue;
             } else if (transaction.amount <= 0) {
+                // Cannot be 0 because that would make the transaction useless.
                 declined.message = "Transaction amount cannot be negative or 0; got: "
                         + User.formatDouble(transaction.amount);
                 events.add(declined);
@@ -82,17 +87,20 @@ public class Transaction {
             }
             transaction_id_List.add(transaction.transaction_id);
 
+            // Validate user legitimacy, Iban/card info and compare transaction amount to user balance/limitations
             declined.message = User.processUsers(transaction, users, binMappings, deposits);
             if (declined.message.equals("")) {
+                
+                // Add successful deposit to the list
                 if (transaction.type.equals("DEPOSIT"))
                     deposits.add(new Deposit(transaction.account_number, transaction.user_id));
 
+                // Calculates new user balance.
                 double amount = transaction.type.equals("DEPOSIT") ? transaction.amount : -transaction.amount;
                 users.forEach(user -> { 
                     if (user.user_id.equals(transaction.user_id)) 
                         user.balance += amount;
                 });
-
                 events.add(approved);
             } else
                 events.add(declined);

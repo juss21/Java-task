@@ -27,6 +27,7 @@ public class TransactionProcessorSample {
         TransactionProcessorSample.writeEvents(Paths.get(args[4]), events);
     }
 
+    // Creates directories if path is given
     private static void createDir(final Path filePath) throws IOException {
         Path directoryPath = filePath.getParent();
         if (directoryPath != null && !Files.exists(directoryPath)) {

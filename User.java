@@ -38,6 +38,7 @@ public class User {
         File file = filePath.toFile();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            // Skip first line and start the count from 1
             reader.readLine();
             int lineNumber = 1;
             String lineText;
@@ -45,6 +46,9 @@ public class User {
             while ((lineText = reader.readLine()) != null) {
                 lineNumber++;
                 String[] dataArray = lineText.split(",");
+
+                // 9 = length of user class and expected output from the file,
+                // could also be an argument variable if file reading is done with one function
                 if (dataArray.length == 9) {
                     try {
                         data.add(new User(dataArray));
@@ -68,6 +72,7 @@ public class User {
 
     private static String amountValidation(double max, double min, double amount, String transactionType,
             double balance) {
+
         if (amount < min || amount > max) {
             return "Amount " + formatDouble(amount) + " is "
                     + (amount < min ? "under the " + transactionType + " limit of " + formatDouble(min)
@@ -79,19 +84,21 @@ public class User {
         }
         return "";
     }
+
     public static String processUsers(Transaction transaction, final List<User> users,
             final List<BinMapping> binMappings, List<Deposit> deposits) {
 
         for (User user : users) {
             if (user.user_id.equals(transaction.user_id)) {
-                if (user.frozen) {
+                if (user.frozen)
                     return user.user_id + " - Account is frozen";
-                }
 
                 double max = transaction.type.equals("DEPOSIT") ? user.deposit_max : user.withdraw_max;
                 double min = transaction.type.equals("DEPOSIT") ? user.deposit_min : user.withdraw_min;
 
-                String message = amountValidation(max, min, transaction.amount, transaction.type.toLowerCase(), user.balance);
+                // Compares amount to user limits and current balance when its a withdrawal
+                String message = amountValidation(max, min, transaction.amount, transaction.type.toLowerCase(),
+                        user.balance);
                 if (!message.equals(""))
                     return message;
 
@@ -104,10 +111,9 @@ public class User {
 
                 return BinMapping.ValidateCard(transaction.account_number, binMappings, user);
             }
-            if (users.getLast().equals(user)) {
+            if (users.getLast().equals(user))
                 return "User " + transaction.user_id + " not found in Users";
-            }
         }
-        return "";
+        return "No users found.";
     }
 }

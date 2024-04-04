@@ -37,8 +37,15 @@ public class BinMapping {
             while ((lineText = reader.readLine()) != null) {
                 lineNumber++;
                 String[] dataArray = lineText.split(",");
+                
+                // 5 = length of BinMapping class and expected output from the file,
+                // could also be an argument variable if file reading is done with one function
                 if (dataArray.length == 5) {
-                    data.add(new BinMapping(dataArray));
+                    try {
+                        data.add(new BinMapping(dataArray));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error formatting data to number - file path: " + filePath + " at line " + lineNumber + " - " + e.getMessage());
+                    }
                 } else {
                     System.err.println("Invalid data at line " + lineNumber + " file path: " + filePath);
                 }
@@ -55,10 +62,12 @@ public class BinMapping {
         for (BinMapping bin : bins) {
             if (firstTenDigits >= bin.range_from && firstTenDigits <= bin.range_to) {
 
+                // Compare user country to bank country
                 String userCountry = Locale.of("en", user.country).getISO3Country();
                 if (!userCountry.equals(bin.country))
                     return "Invalid country " + bin.country + "; expected " + user.country + " (" + userCountry + ")";
 
+                // Check for correct card type
                 return bin.type.equals("DC") ? "" : "Only DC cards allowed; got " + bin.type;
             }
         }
